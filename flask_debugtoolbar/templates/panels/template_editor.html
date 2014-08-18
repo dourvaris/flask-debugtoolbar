@@ -42,6 +42,7 @@
     #toolbar button { margin: 0; }
     #save { float: left; }
     #close { float: right; }
+    #error { background: orange; color: black; padding: 2px;}
     {% endwith %}
   </style>
 </head>
@@ -53,6 +54,7 @@
       <button id="close">Close</button>
     </div>
     <div id="editor">
+      <div id="error"></div>
       <textarea name="{{ templates[0].name }}" id="code">{{ templates[0].source }}</textarea>
     </div>
     <div id="splitter"></div>
@@ -116,7 +118,7 @@
         delay = setTimeout(updatePreview, 300);
       }
     });
-    
+
     var previewFrame = document.getElementById('preview');
     var preview = previewFrame.contentDocument || previewFrame.contentWindow.document;
     var errorLine = null;
@@ -127,6 +129,7 @@
       , url: ''
       , data: {content: editor.getValue()}
       , success: function(data, status, xhr) {
+          $("#error").html('');
           if (errorLine != null) {
             editor.setLineClass(errorLine, null, null);
           }
@@ -136,6 +139,7 @@
           $('head', preview).append('<base target="_top">');
         }
       , error: function(xhr, status, error) {
+          $("#error").html('');
           if (status === 'error') {
             var data = JSON.parse(xhr.responseText);
             console.log(data);
@@ -143,6 +147,7 @@
               editor.setLineClass(errorLine, null, null);
             }
             errorLine = editor.setLineClass(data.lineno - 1, null, 'syntax-error');
+            $("#error").html('Line ' + data.lineno + ': ' + data.error);
           }
         }
       });

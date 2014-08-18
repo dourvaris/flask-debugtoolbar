@@ -3,7 +3,6 @@ import json
 import sys
 import traceback
 import uuid
-from jinja2.exceptions import TemplateSyntaxError
 
 from flask import (
     template_rendered, request, g, render_template_string,
@@ -89,6 +88,10 @@ def _get_source(template):
 def _template_encoding():
     return getattr(current_app.jinja_loader, 'encoding', 'utf-8')
 
+def _get_name(template):
+    if hasattr(template, 'name'):
+        return template.name
+    return template.uri
 
 @module.route('/template/<key>')
 def template_editor(key):
@@ -100,7 +103,7 @@ def template_editor(key):
         'static_path': url_for('_debug_toolbar.static', filename=''),
         'request': request,
         'templates': [
-            {'name': t.name, 'source': _get_source(t)}
+            {'name': _get_name(t), 'source': _get_source(t)}
             for t in templates
         ]
     })
@@ -119,18 +122,41 @@ def save_template(key):
 @module.route('/template/<key>', methods=['POST'])
 def template_preview(key):
     require_enabled()
-    context = TemplateDebugPanel.get_cache_for_key(key)[0]['context']
+    template = TemplateDebugPanel.get_cache_for_key(key)[0]
+    context = template['context']
     content = request.form['content']
     env = current_app.jinja_env.overlay(autoescape=True)
+    if 'mako.template.Template' in str(template['template'].__class__):
+        env = current_app._mako_lookup
+        from flask_mako import _render, render_template_string
+        from mako.exceptions import SyntaxException as MakoSyntaxException
+        try:
+            return render_template_string(content, **context) 
+        except Exception as e:
+            tb = sys.exc_info()[2]
+            while tb.tb_next:
+                tb = tb.tb_next
+            try:
+                errmsg = str(e.einfo[1])
+            except:
+                errmsg = e.message
+            try:
+                msg = {'lineno': e.lineno, 'error': errmsg}
+                return Response(json.dumps(msg), status=400, mimetype='application/json')
+            finally:
+                del tb
+
+
     try:
         template = env.from_string(content)
         return template.render(context)
     except Exception as e:
         tb = sys.exc_info()[2]
         try:
+            errmsg = str(e.__class__.__name__) + ' - ' + str(e)
             while tb.tb_next:
                 tb = tb.tb_next
-            msg = {'lineno': tb.tb_lineno, 'error': str(e)}
+            msg = {'lineno': tb.tb_lineno, 'error': errmsg}
             return Response(json.dumps(msg), status=400, mimetype='application/json')
         finally:
             del tb
