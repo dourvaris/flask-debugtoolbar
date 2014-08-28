@@ -140,3 +140,22 @@ def sql_explain():
         'sql': format_sql(statement, params),
         'duration': float(request.args['duration']),
     })
+
+@module.route('/sqlalchemy/sql_analyze', methods=['GET', 'POST'])
+def sql_analyze():
+    statement, params = load_query(request.args['query'])
+    engine = SQLAlchemy().get_engine(current_app)
+
+    if engine.driver == 'pysqlite':
+        query = 'EXPLAIN ANALYZE QUERY PLAN %s' % statement
+    else:
+        query = 'EXPLAIN ANALYZE %s' % statement
+
+    result = engine.execute(query, params)
+    return g.debug_toolbar.render('panels/sqlalchemy_explain.html', {
+        'result': result.fetchall(),
+        'headers': result.keys(),
+        'sql': format_sql(statement, params),
+        'duration': float(request.args['duration']),
+    })
+
