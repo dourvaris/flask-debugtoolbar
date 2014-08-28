@@ -15,6 +15,7 @@
         {% if query.signed_query %}
           <a class="remoteCall" href="/_debug_toolbar/views/sqlalchemy/sql_select?query={{ query.signed_query }}&amp;duration={{ query.duration|urlencode }}">SELECT</a><br />
           <a class="remoteCall" href="/_debug_toolbar/views/sqlalchemy/sql_explain?query={{ query.signed_query }}&amp;duration={{ query.duration|urlencode }}">EXPLAIN</a><br />
+          <a class="remoteCall" href="/_debug_toolbar/views/sqlalchemy/sql_analyze?query={{ query.signed_query }}&amp;duration={{ query.duration|urlencode }}">ANALYZE</a><br />
         {% endif %}
         </td>
         <td title="{{ query.context_long }}">
