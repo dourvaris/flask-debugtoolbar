@@ -110,9 +110,17 @@ class SQLAlchemyDebugPanel(DebugPanel):
 
 
 @module.route('/sqlalchemy/sql_select', methods=['GET', 'POST'])
-def sql_select():
+@module.route('/sqlalchemy/sql_explain', methods=['GET', 'POST'],
+              defaults=dict(explain=True))
+def sql_select(explain=False):
     statement, params = load_query(request.args['query'])
     engine = SQLAlchemy().get_engine(current_app)
+
+    if explain:
+        if engine.driver == 'pysqlite':
+            statement = 'EXPLAIN QUERY PLAN\n%s' % statement
+        else:
+            statement = 'EXPLAIN\n%s' % statement
 
     result = engine.execute(statement, params)
     return g.debug_toolbar.render('panels/sqlalchemy_select.html', {
@@ -158,4 +166,3 @@ def sql_analyze():
         'sql': format_sql(statement, params),
         'duration': float(request.args['duration']),
     })
-
