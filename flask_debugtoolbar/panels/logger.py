@@ -100,8 +100,13 @@ class LoggingPanel(DebugPanel):
     def content(self):
         records = []
         for record in self.get_and_delete():
+            message = record.getMessage()
+            try:
+                message = message.decode('utf8')
+            except UnicodeError:
+                pass
             records.append({
-                'message': record.getMessage(),
+                'message': message,
                 'time': datetime.datetime.fromtimestamp(record.created),
                 'level': record.levelname,
                 'file': format_fname(record.pathname),
